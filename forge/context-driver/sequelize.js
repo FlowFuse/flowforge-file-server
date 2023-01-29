@@ -54,12 +54,28 @@ module.exports = {
         await sequelize.sync()
         this.Context = Context
     },
-    set: async function (projectId, scope, input) {
+    /**
+     * Set the context data for a given scope
+     * @param {string} projectId - The project id
+     * @param {string} scope - The context scope to write to
+     * @param {[{key:string, value:any}]} input - The context data to write
+     * @param {boolean} [overwrite=false] - If true, any context data will be overwritten (i.e. for a cache dump). If false, the context data will be merged with the existing data.
+     */
+    set: async function (projectId, scope, input, overwrite = false) {
         const { path } = parseScope(scope)
         await sequelize.transaction({
             type: Sequelize.Transaction.TYPES.IMMEDIATE
         },
         async (t) => {
+            // get the existing row of context data from the database (if any)
+            let existingRow = await this.Context.findOne({
+                where: {
+                    project: projectId,
+                    scope: path
+                },
+                lock: t.LOCK.UPDATE,
+                transaction: t
+            })
             const quotaLimit = app.config?.context?.quota || 0
             // if quota is set, check if we are over quota or will be after this update
             if (quotaLimit > 0) {
@@ -70,16 +86,18 @@ module.exports = {
                 // This implementation is not ideal, but it is a good approximation and will
                 //   prevent the possibility of runaway storage usage.
                 let changeSize = 0
-                const { path } = parseScope(scope)
-                const row = await this.Context.findOne({
-                    attributes: ['values'],
-                    where: {
-                        project: projectId,
-                        scope: path
+                let hasValues = false
+                // if we are overwriting, then we need to remove the existing size to get the final size
+                if (existingRow) {
+                    if (overwrite) {
+                        changeSize -= getItemSize(existingRow.values || '')
+                    } else {
+                        hasValues = existingRow?.values && Object.keys(existingRow.values).length > 0
                     }
-                })
+                }
+                // calculate the change in size
                 for (const element of input) {
-                    const currentItem = row ? getObjectProperty(row.values, element.key) : undefined
+                    const currentItem = hasValues ? getObjectProperty(existingRow.values, element.key) : undefined
                     if (currentItem === undefined && element.value !== undefined) {
                         // this is an addition
                         changeSize += getItemSize(element.value)
@@ -104,33 +122,47 @@ module.exports = {
                     }
                 }
             }
-            let existing = await this.Context.findOne({
-                where: {
-                    project: projectId,
-                    scope: path
-                },
-                lock: t.LOCK.UPDATE,
-                transaction: t
-            })
-            if (!existing) {
-                existing = await this.Context.create({
-                    project: projectId,
-                    scope: path,
-                    values: {}
-                },
-                {
-                    transaction: t
-                })
+
+            // if we are overwriting, then we need to reset the values in the existing row (if any)
+            if (existingRow && overwrite) {
+                existingRow.values = {} // reset the values since this is a mem cache -> DB dump
             }
-            for (const i in input) {
-                const path = input[i].key
-                const value = input[i].value
-                util.setMessageProperty(existing.values, path, value)
+
+            // if there is no input, then we are probably deleting the row
+            if (input?.length > 0) {
+                if (!existingRow) {
+                    existingRow = await this.Context.create({
+                        project: projectId,
+                        scope: path,
+                        values: {}
+                    },
+                    {
+                        transaction: t
+                    })
+                }
+                for (const i in input) {
+                    const path = input[i].key
+                    const value = input[i].value
+                    util.setMessageProperty(existingRow.values, path, value)
+                }
             }
-            existing.changed('values', true)
-            await existing.save({ transaction: t })
+            if (existingRow) {
+                if (existingRow.values && Object.keys(existingRow.values).length === 0) {
+                    await existingRow.destroy({ transaction: t })
+                } else {
+                    existingRow.changed('values', true)
+                    await existingRow.save({ transaction: t })
+                }
+            }
         })
     },
+    /**
+     * Get the context data for a given scope
+     * @param {string} projectId - The project id
+     * @param {string} scope - The context scope to read from
+     * @param {[string]} keys - The context keys to read
+     * @returns {[{key:string, value?:any}]} - The context data
+    */
     get: async function (projectId, scope, keys) {
         const { path } = parseScope(scope)
         const row = await this.Context.findOne({
@@ -161,6 +193,38 @@ module.exports = {
             })
         }
         return values
+    },
+    /**
+     * Get all context values for a project
+     * @param {string} projectId The project id
+     * @param {object} pagination The pagination settings
+     * @param {number} pagination.limit The maximum number of rows to return
+     * @param {string} pagination.cursor The cursor to start from
+     * @returns {[{scope: string, values: object}]}
+     */
+    getAll: async function (projectId, pagination = {}) {
+        const where = { project: projectId }
+        const limit = parseInt(pagination.limit) || 1000
+        const rows = await this.Context.findAll({
+            attributes: ['id', 'scope', 'values'],
+            where: buildPaginationSearchClause(pagination, where),
+            order: [['id', 'ASC']],
+            limit
+        })
+        const count = await this.Context.count({ where })
+        const data = rows?.map(row => {
+            const dataRow = { scope: row.dataValues.scope, values: row.dataValues.values }
+            const { scope } = parseScope(dataRow.scope)
+            dataRow.scope = scope
+            return dataRow
+        })
+        return {
+            meta: {
+                next_cursor: rows.length === limit ? rows[rows.length - 1].id : undefined
+            },
+            count,
+            data
+        }
     },
     keys: async function (projectId, scope) {
         const { path } = parseScope(scope)
@@ -225,7 +289,7 @@ module.exports = {
                         scope
                     }
                 })
-                await r.destroy()
+                r && await r.destroy()
             }
         }
     },
