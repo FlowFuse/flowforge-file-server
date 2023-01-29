@@ -246,25 +246,41 @@ module.exports = {
 
 /**
  * Parse a scope string into its parts
- * @param {String} scope the scope to parse, passed in from node-red
+ * @param {String} scope the scope to parse, passed in from node-red or the database
  */
 function parseScope (scope) {
     let type, path
     let flow = null
+    let node = null
     if (scope === 'global') {
         type = 'global'
         path = 'global'
+    } else if (scope.indexOf('.nodes.') > -1) {
+        // node context (db scope format  <flowId>.nodes.<nodeId>)
+        const parts = scope.split('.nodes.')
+        type = 'node'
+        flow = '' + parts[0]
+        node = '' + parts[1]
+        scope = `${node}:${flow}`
+        path = scope
+    } else if (scope.endsWith('.flow')) {
+        // flow context (db scope format  <flowId>.flow)
+        path = scope
+        flow = scope.replace('.flow', '')
+        scope = flow
+        type = 'flow'
     } else if (scope.indexOf(':') > -1) {
-        // node context
+        // node context (node-red scope format  <nodeId>:<flowId>)
         const parts = scope.split(':')
         type = 'node'
-        scope = '' + parts[0]
         flow = '' + parts[1]
-        path = `${flow}.nodes.${scope}`
+        node = '' + parts[0]
+        path = `${flow}.nodes.${node}`
     } else {
         // flow context
         type = 'flow'
         path = `${scope}.flow`
     }
-    return { type, scope, path, flow }
+    return { type, scope, path, flow, node }
+}
 }
