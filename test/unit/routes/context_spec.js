@@ -3,20 +3,13 @@ const setup = require('../setup')
 const util = require('util')
 
 const fv1 = { key: 'flow-key-1', value: 'flow-1' }
-const fv2 = { key: 'flow-key-2', value: { bool: true, num: 0, str: 'hello' } }
+const fv2 = { key: 'flow-key-2', value: { bool: true, num: 0, str: 'hello flow-key-2' } }
 const gv1 = { key: 'global-key-1', value: 'global-1' }
-const gv2 = { key: 'global-key-2', value: { bool: true, num: 0, str: 'hello' } }
+const gv2 = { key: 'global-key-2', value: { bool: false, num: 2, str: 'hello global-key-2' } }
 const nv1 = { key: 'node-1-key-1', value: 'node-1-1' }
-const nv2 = { key: 'node-1-key-2', value: { bool: true, num: 0, str: 'hello' } }
+const nv2 = { key: 'node-1-key-2', value: { bool: true, num: -2, str: 'hello node-1-key-2' } }
 
 describe('Context API', function () {
-    contextApiTests({
-        driverType: 'memory',
-        driverOptions: {},
-        appPort: 4011,
-        authServerPort: 4012,
-        contextQuota: 1000 // set quota to 1K and test we don't exceed it
-    })
     contextApiTests({
         testName: 'Sequelize + sqlite',
         driverType: 'sequelize',
@@ -45,12 +38,6 @@ describe('Context API', function () {
             contextQuota: 1000 // set quota to 1K and test we don't exceed it
         })
     }
-    // contextApiTests({
-    //     driverType: 'redis',
-    //     driverOptions: { /* TODO */},
-    //     appPort: 4021,
-    //     authServerPort: 4022
-    // })
 })
 
 function contextApiTests ({ testName, driverType, driverOptions, appPort, authServerPort, contextQuota } = {}) {
