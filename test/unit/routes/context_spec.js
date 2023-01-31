@@ -3,20 +3,13 @@ const setup = require('../setup')
 const util = require('util')
 
 const fv1 = { key: 'flow-key-1', value: 'flow-1' }
-const fv2 = { key: 'flow-key-2', value: { bool: true, num: 0, str: 'hello' } }
+const fv2 = { key: 'flow-key-2', value: { bool: true, num: 0, str: 'hello flow-key-2' } }
 const gv1 = { key: 'global-key-1', value: 'global-1' }
-const gv2 = { key: 'global-key-2', value: { bool: true, num: 0, str: 'hello' } }
+const gv2 = { key: 'global-key-2', value: { bool: false, num: 2, str: 'hello global-key-2' } }
 const nv1 = { key: 'node-1-key-1', value: 'node-1-1' }
-const nv2 = { key: 'node-1-key-2', value: { bool: true, num: 0, str: 'hello' } }
+const nv2 = { key: 'node-1-key-2', value: { bool: true, num: -2, str: 'hello node-1-key-2' } }
 
 describe('Context API', function () {
-    contextApiTests({
-        driverType: 'memory',
-        driverOptions: {},
-        appPort: 4011,
-        authServerPort: 4012,
-        contextQuota: 1000 // set quota to 1K and test we don't exceed it
-    })
     contextApiTests({
         testName: 'Sequelize + sqlite',
         driverType: 'sequelize',
@@ -45,12 +38,6 @@ describe('Context API', function () {
             contextQuota: 1000 // set quota to 1K and test we don't exceed it
         })
     }
-    // contextApiTests({
-    //     driverType: 'redis',
-    //     driverOptions: { /* TODO */},
-    //     appPort: 4021,
-    //     authServerPort: 4022
-    // })
 })
 
 function contextApiTests ({ testName, driverType, driverOptions, appPort, authServerPort, contextQuota } = {}) {
@@ -181,6 +168,51 @@ function contextApiTests ({ testName, driverType, driverOptions, appPort, authSe
                     'content-type': 'application/json',
                     authorization: `Bearer ${token}`
                 }
+            }
+            return await app.inject(opts)
+        }
+
+        /**
+         * GET_CACHE /v1/context/{project}/{scope}/cache
+         * @param {String} project - The project to set the context in (optional, defaults to 'test-project-1')
+         * @param {String} token - The token to use (optional, defaults to 'test-token-1')
+         * @param {Object} pagination - The pagination object
+         * @param {Number} pagination.limit - The number of items to return
+         * @param {Number} pagination.cursor - The cursor to start from
+        */
+        async function GET_CACHE (pagination = {}, project = 'test-project-1', token = 'test-token-1') {
+            pagination.limit = pagination.limit || 20
+            pagination.cursor = pagination.cursor || null
+            let url = `/v1/context/${project}/cache?limit=${pagination.limit}`
+            if (pagination.cursor !== null && pagination.cursor >= 0) {
+                url += `&cursor=${pagination.cursor}`
+            }
+            const opts = {
+                method: 'GET',
+                url,
+                headers: {
+                    'content-type': 'application/json',
+                    authorization: `Bearer ${token}`
+                }
+            }
+            return await app.inject(opts)
+        }
+        /**
+         * WRITE_CACHE /v1/context/{project}/cache/{scope}
+         * @param {string|'global'} scope - the context scope to set the value in ('global', 'flowId' or 'nodeId:flowId')
+         * @param {Object} data - The data to write to the cache
+         * @param {String} project - The project to set the context in (optional, defaults to 'test-project-1')
+         * @param {String} token - The token to use (optional, defaults to 'test-token-1')
+        */
+        async function WRITE_CACHE (scope, data, project = 'test-project-1', token = 'test-token-1') {
+            const opts = {
+                method: 'POST',
+                url: `/v1/context/${project}/cache/${scope}`,
+                headers: {
+                    'content-type': 'application/json',
+                    authorization: `Bearer ${token}`
+                },
+                body: data
             }
             return await app.inject(opts)
         }
@@ -570,6 +602,103 @@ function contextApiTests ({ testName, driverType, driverOptions, appPort, authSe
                 it('should return error if bad key included in multiple keys', async function () {
                     const response = await GET('node-1:flow-1', ['node-1-key-1', '.1.x', 'node-1-key-2.unknown', 'node-1-key-1.str'])
                     should(response.statusCode).eql(400, 'Should have returned an error for bad key')
+                })
+            })
+        })
+        describe('Cache API', function () {
+            beforeEach(async function () {
+                await CLEAN([])
+                await DELETE('flow-1')
+                await DELETE('global')
+                await DELETE('node-1:flow-1')
+                await SET('flow-1', [fv1])
+                await SET('flow-1', [fv2])
+                await SET('global', [gv1])
+                await SET('global', [gv2])
+                await SET('node-1:flow-1', [nv1])
+                await SET('node-1:flow-1', [nv2])
+            })
+            describe('Get flow context value', function () {
+                it('Should get all context in one request', async function () {
+                    if (driverType !== 'sequelize') { this.skip() }
+                    const response = await GET_CACHE({ limit: 1000000 })
+                    should(response.statusCode).eql(200)
+                    const result = response.json()
+                    result.should.have.a.property('meta')
+                    result.meta.should.not.have.a.property('next_cursor')
+                    result.should.have.a.property('count', 3)
+                    result.should.have.a.property('data')
+                    result.data.should.have.a.property('length', 3)
+                    should(result.data[0]).deepEqual({
+                        scope: 'flow-1',
+                        values: {
+                            [fv1.key]: fv1.value,
+                            [fv2.key]: fv2.value
+                        }
+                    })
+                    should(result.data[1]).deepEqual({
+                        scope: 'global',
+                        values: {
+                            [gv1.key]: gv1.value,
+                            [gv2.key]: gv2.value
+                        }
+                    })
+                    should(result.data[2]).deepEqual({
+                        scope: 'node-1:flow-1',
+                        values: {
+                            [nv1.key]: nv1.value,
+                            [nv2.key]: nv2.value
+                        }
+                    })
+                })
+                it('Should get 1st page of context only', async function () {
+                    if (driverType !== 'sequelize') { this.skip() }
+                    const response = await GET_CACHE({ limit: 1 }) // only get 1 item (the 1st context which should be flow-1)
+                    should(response.statusCode).eql(200)
+                    const result = response.json()
+                    result.should.have.a.property('meta')
+                    result.meta.should.have.a.property('next_cursor')
+                    result.should.have.a.property('count', 3) // 3 contexts available in DB
+                    result.should.have.a.property('data')
+                    result.data.should.have.a.property('length', 1) // only 1 item returned
+
+                    should(result.data[0]).deepEqual({
+                        scope: 'flow-1',
+                        values: {
+                            [fv1.key]: fv1.value,
+                            [fv2.key]: fv2.value
+                        }
+                    })
+                })
+                it('Should get 2 pages of context', async function () {
+                    if (driverType !== 'sequelize') { this.skip() }
+                    const response = await GET_CACHE({ limit: 2 }) // only get 2 items
+                    should(response.statusCode).eql(200)
+                    const result = response.json()
+                    result.should.have.a.property('meta')
+                    result.meta.should.have.a.property('next_cursor')
+                    result.should.have.a.property('count', 3) // 3 contexts available in DB
+                    result.should.have.a.property('data')
+                    result.data.should.have.a.property('length', 2) // only 2 items returned
+                })
+            })
+            describe('Write cache (scoped) context values (sequelize only)', function () {
+                it('Should set global context', async function () {
+                    if (driverType !== 'sequelize') { this.skip() }
+                    const data = {
+                        test: 'one this value should exist'
+                    }
+                    const response = await WRITE_CACHE('global', data)
+                    should(response.statusCode).eql(200)
+                    const response2 = await GET_CACHE({ limit: 100000 })
+                    const result = response2.json()
+                    result.should.have.a.property('data')
+                    result.data.should.have.a.property('length').and.be.greaterThan(0)
+                    const globalContext = result.data.find((d) => d.scope === 'global')
+                    should(globalContext).deepEqual({
+                        scope: 'global',
+                        values: data
+                    })
                 })
             })
         })

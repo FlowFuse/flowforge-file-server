@@ -7,5 +7,12 @@ module.exports = fp(async function (app, opts, done) {
     if (app.config.context?.type) {
         await app.register(require('./context'), { prefix: '/v1/context', logLevel: app.config.logging.http })
     }
+    app.decorate('getPaginationOptions', (request, defaults) => {
+        const result = { ...defaults, ...request.query }
+        if (result.query) {
+            result.query = result.query.trim()
+        }
+        return result
+    })
     done()
 })

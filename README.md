@@ -157,17 +157,6 @@ options.
 
 ### Context Storage
 
-#### Redis
-
-This driver requires an instance of Redis with the RedisJSON enabled e.g. the `redislabs/rejson` docker container
-
-```yaml
-context:
-  type: redis
-  options:
-    urls: redis://localhost:6379
-```
-
 #### Sequelize
 
 This driver can use either PostgreSQL or SQLite to hold context values.
@@ -198,10 +187,6 @@ context:
 
 Where `context.options.storage` is the filename of the SQLite database, by default it will be written to 
 the `var` directory if a fully qualified path is not provided.
-
-#### Memory
-
-This driver is purely to make testing easier, it has no configuration options.
 
 ### Environment variables
 
