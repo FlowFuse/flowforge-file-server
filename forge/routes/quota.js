@@ -1,4 +1,3 @@
-
 module.exports = async function (app, opts, done) {
     app.get('/:teamId/:projectId', async (request, reply) => {
         reply.send({
