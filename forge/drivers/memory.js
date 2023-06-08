@@ -1,4 +1,3 @@
-
 const { join, sep: pathSeparator } = require('path')
 
 const canary = 'ROOT_DIR_CANARY'

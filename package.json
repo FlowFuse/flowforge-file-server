@@ -1,6 +1,6 @@
 {
     "name": "@flowforge/file-server",
-    "version": "1.7.0",
+    "version": "1.8.0",
     "description": "A basic Object Storage backend",
     "main": "index.js",
     "scripts": {
