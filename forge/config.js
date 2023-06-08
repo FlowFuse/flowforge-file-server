@@ -1,4 +1,3 @@
-
 const fs = require('fs')
 const fp = require('fastify-plugin')
 const path = require('path')

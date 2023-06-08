@@ -1,4 +1,3 @@
-
 const fp = require('fastify-plugin')
 const got = require('got')
 
