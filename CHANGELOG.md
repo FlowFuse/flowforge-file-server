@@ -1,3 +1,7 @@
+#### 1.9.0: Release
+
+ - Add package-lock.json (#55) @Pezmc
+
 #### 1.8.0: Release
 
 
