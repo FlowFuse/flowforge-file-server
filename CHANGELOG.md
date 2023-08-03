@@ -1,3 +1,7 @@
+#### 1.10.0: Release
+
+ - Chore: Set root flag in eslint (#57) @Pezmc
+
 #### 1.9.0: Release
 
  - Add package-lock.json (#55) @Pezmc
