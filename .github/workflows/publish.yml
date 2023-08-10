@@ -13,12 +13,11 @@ on:
 jobs:
   build:
     uses: 'flowforge/github-actions-workflows/.github/workflows/build_node_package_with_pgsql.yml@main'
+    with:
+      run_tests: true
   
   publish:
     needs: build
-    permissions:
-      packages: write
-      contents: read
     uses: 'flowforge/github-actions-workflows/.github/workflows/publish_node_package.yml@main'
     with:
       package_name: flowforge-file-server
