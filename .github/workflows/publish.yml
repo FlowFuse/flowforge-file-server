@@ -12,7 +12,7 @@ on:
 
 jobs:
   build:
-    uses: 'flowforge/github-actions-workflows/.github/workflows/build_node_package_with_pgsql.yml@feat-build-with-pgsql'
+    uses: 'flowforge/github-actions-workflows/.github/workflows/build_node_package_with_pgsql.yml@main'
   
   publish:
     needs: build
