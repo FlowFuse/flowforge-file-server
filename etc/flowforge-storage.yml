@@ -16,4 +16,7 @@ driver:
   #   forcePathStyle: true
   #   region: eu-west-1
 context:
-  type: memory
+  type: sequelize
+  options:
+    type: sqlite
+    storage: ff-context.db
