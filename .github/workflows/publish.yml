@@ -36,7 +36,7 @@ jobs:
         with:
           app_id: ${{ secrets.GH_BOT_APP_ID }}
           private_key: ${{ secrets.GH_BOT_APP_KEY }}
-      - name: Trigger localfs package rebuild
+      - name: Trigger flie-server container image build
         uses: benc-uk/workflow-dispatch@v1
         with:
           workflow: fileserver-container.yml
