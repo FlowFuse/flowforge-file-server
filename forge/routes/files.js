@@ -26,17 +26,23 @@ module.exports = async function (app, opts, done) {
     }, async (request, reply) => {
         const path = request.params['*']
         let quota = -1
-        if (app.config.driver.quota) {
-            quota = await request.vfs.quota()
+        if (request.quota?.file) {
+            quota = request.quota.file
+        } else if (app.config.driver.quota) {
+            quota = app.config.driver.quota
+        }
+        let currentSize = -1
+        if (quota != -1) {
+            currentSize = await request.vfs.quota()
         }
         try {
             if (request.headers.ff_mode === 'append') {
-                if (quota !== -1) {
-                    const newSize = quota + request.body.length
-                    if (newSize < app.config.driver.quota) {
+                if (currentSize !== -1) {
+                    const newSize = currentSize + request.body.length
+                    if (newSize < quota) {
                         await request.vfs.append(path, request.body)
                     } else {
-                        reply.code(413).send({ code: 'over_quota', error: 'Over Quota', limit: app.config.driver.quota })
+                        reply.code(413).send({ code: 'over_quota', error: 'Over Quota', limit: quota })
                         return
                     }
                 } else {
@@ -46,12 +52,12 @@ module.exports = async function (app, opts, done) {
                 await request.vfs.ensureDir(path, request.body)
             } else {
                 // should really check if file exists first and compute the delta
-                if (quota !== -1) {
-                    const newSize = quota + request.body.length
-                    if (newSize < app.config.driver.quota) {
+                if (currentSize !== -1) {
+                    const newSize = currentSize + request.body.length
+                    if (newSize < quota) {
                         await request.vfs.save(path, request.body)
                     } else {
-                        reply.code(413).send({ code: 'over_quota', error: 'Over Quota', limit: app.config.driver.quota })
+                        reply.code(413).send({ code: 'over_quota', error: 'Over Quota', limit: quota })
                         return
                     }
                 } else {

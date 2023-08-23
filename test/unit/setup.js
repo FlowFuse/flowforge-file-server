@@ -22,7 +22,7 @@ function authServer (config = {}) {
                 authToken = authConfig.find(auth => auth.projectId === projectId)
                 if (req.headers.authorization === ('Bearer ' + authToken.token)) {
                     res.writeHead(200)
-                    res.end('{}')
+                    res.end('{ "file": 1000, "context": 1000 }')
                     return
                 }
                 throw new Error('Unknown request')

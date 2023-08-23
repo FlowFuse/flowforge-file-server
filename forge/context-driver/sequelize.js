@@ -60,8 +60,9 @@ module.exports = {
      * @param {string} scope - The context scope to write to
      * @param {[{key:string, value:any}]} input - The context data to write
      * @param {boolean} [overwrite=false] - If true, any context data will be overwritten (i.e. for a cache dump). If false, the context data will be merged with the existing data.
+     * @param {number} quotaOverride - if set overrides the locally configured limit
      */
-    set: async function (projectId, scope, input, overwrite = false) {
+    set: async function (projectId, scope, input, overwrite = false, quotaOverride = 0) {
         const { path } = parseScope(scope)
         await sequelize.transaction({
             type: Sequelize.Transaction.TYPES.IMMEDIATE
@@ -76,7 +77,7 @@ module.exports = {
                 lock: t.LOCK.UPDATE,
                 transaction: t
             })
-            const quotaLimit = app.config?.context?.quota || 0
+            const quotaLimit = quotaOverride ? quotaOverride :  app.config?.context?.quota || 0
             // if quota is set, check if we are over quota or will be after this update
             if (quotaLimit > 0) {
                 // Difficulties implementing this correctly
