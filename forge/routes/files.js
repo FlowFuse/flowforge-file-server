@@ -32,7 +32,7 @@ module.exports = async function (app, opts, done) {
             quota = app.config.driver.quota
         }
         let currentSize = -1
-        if (quota != -1) {
+        if (quota !== -1) {
             currentSize = await request.vfs.quota()
         }
         try {

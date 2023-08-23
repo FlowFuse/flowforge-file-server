@@ -39,7 +39,7 @@ module.exports = async function (app, opts, done) {
         const projectId = request.params.projectId
         const scope = request.params.scope
         try {
-            await driver.set(projectId, scope, body, false, request.quota?.context )
+            await driver.set(projectId, scope, body, false, request.quota?.context)
             reply.code(200).send({})
         } catch (error) {
             let statusCode = error.statusCode || 400

@@ -77,7 +77,7 @@ module.exports = {
                 lock: t.LOCK.UPDATE,
                 transaction: t
             })
-            const quotaLimit = quotaOverride ? quotaOverride :  app.config?.context?.quota || 0
+            const quotaLimit = quotaOverride || app.config?.context?.quota || 0
             // if quota is set, check if we are over quota or will be after this update
             if (quotaLimit > 0) {
                 // Difficulties implementing this correctly
