@@ -39,7 +39,7 @@ module.exports = fp(async function (app, opts, done) {
                 authCache[token] = {
                     ttl: Date.now(),
                     projectId: request.params.projectId,
-                    quota: tokenResponse
+                    quota: tokenResponse.quota
                 }
             } else {
                 request.quota = authCache[token].quota
