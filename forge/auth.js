@@ -34,7 +34,7 @@ module.exports = fp(async function (app, opts, done) {
                 if (!tokenResponse) {
                     throw new Error('Invalid token')
                 }
-                request.quota = tokenResponse
+                request.quota = tokenResponse.quota
                 // update cache
                 authCache[token] = {
                     ttl: Date.now(),
