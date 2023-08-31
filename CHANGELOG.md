@@ -1,3 +1,16 @@
+#### 1.11.0: Release
+
+ - Bump nodemon to allow other deps to be updated (#71) @hardillb
+ - First pass at variable quotas (#70) @hardillb
+ - Move to SQLite from Memory context (#68) @hardillb
+ - Add file-server container build pipeline dispatcher (#69) @ppawlowski
+ - FIX: Publish package on schedule (#65) @ppawlowski
+ - FIX: Allow publish only when changes are pushed to `main` branch (#64) @ppawlowski
+ - Allow publish only when PR is merged (#63) @ppawlowski
+ - Update dependencies (#62) @knolleary
+ - Remove defunct docs tasks (#61) @knolleary
+ - Introduce build and publish workflow (#59) @ppawlowski
+
 #### 1.10.0: Release
 
  - Chore: Set root flag in eslint (#57) @Pezmc
