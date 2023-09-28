@@ -1,3 +1,11 @@
+#### 1.12.0: Release
+
+ - Publish nightly package to npmjs (#77) @ppawlowski
+ - Bump the semver dep (#76) @hardillb
+ - Update dependencies to clear CVEs (#75) @hardillb
+ - Pin reusable workflow to commit SHA (#74) @ppawlowski
+ - Disable scheduled package build (#73) @ppawlowski
+
 #### 1.11.0: Release
 
  - Bump nodemon to allow other deps to be updated (#71) @hardillb
