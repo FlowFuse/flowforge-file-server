@@ -1,8 +1,8 @@
-# A Basic Object Store for use with FlowForge
+# A Basic Object Store for use with FlowFuse
 
 ## Authorisation
 
-All requests should include a `Authorization` header with a Bearer token assigned by the FlowForge platform to identify
+All requests should include a `Authorization` header with a Bearer token assigned by the FlowFuse platform to identify
 ## End Points
 
 ### File Storage
