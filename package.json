@@ -20,16 +20,16 @@
     ],
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/flowforge/flowforge-file-server.git"
+        "url": "git+https://github.com/FlowFuse/file-server.git"
     },
     "author": {
-        "name": "FlowForge Inc."
+        "name": "FlowFuse Inc."
     },
     "license": "Apache-2.0",
     "bugs": {
-        "url": "https://github.com/flowforge/flowforge-file-server/issues"
+        "url": "https://github.com/FlowFuse/file-server/issues"
     },
-    "homepage": "https://github.com/flowforge/flowforge-file-server#readme",
+    "homepage": "https://github.com/FlowFuse/file-server#readme",
     "dependencies": {
         "@aws-sdk/client-s3": "^3.388.0",
         "@fastify/helmet": "^11.0.0",
