@@ -38,6 +38,7 @@
         "fastify-plugin": "^4.5.1",
         "got": "^11.8.6",
         "pg": "^8.11.2",
+        "pino": "^8.15.1",
         "pino-pretty": "^10.2.0",
         "semver": "^7.5.4",
         "sequelize": "^6.33.0",
