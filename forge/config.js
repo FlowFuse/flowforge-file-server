@@ -55,7 +55,7 @@ module.exports = {
                 config = YAML.parse(configFileContent)
                 config.configFile = configFile
             } catch (err) {
-                app.log.error(`Failed to read config file ${configFile}: ${err.message}`)
+                throw new Error(`Failed to read config file ${configFile}: ${err}`)
             }
         }
 
@@ -74,7 +74,7 @@ module.exports = {
 
         return config
     },
-    attach: fp(async function (app, opts, next){
+    attach: fp(async function (app, opts, next) {
         Object.freeze(config)
         app.decorate('config', config)
 
