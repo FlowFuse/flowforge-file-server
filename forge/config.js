@@ -15,7 +15,7 @@ module.exports = {
             process.env.FLOWFORGE_HOME = process.cwd()
         } else if (!process.env.FLOWFORGE_HOME) {
             if (process.env.NODE_ENV === 'development') {
-                process.env.FLOWFORGE_HOME = path.resolve(__dirname, '../..')
+                process.env.FLOWFORGE_HOME = path.resolve(__dirname, '..')
             } else {
                 process.env.FLOWFORGE_HOME = process.cwd()
                 if (fs.existsSync('/opt/flowforge-file-storage')) {
