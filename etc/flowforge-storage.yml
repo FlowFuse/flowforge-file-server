@@ -20,3 +20,7 @@ context:
   options:
     type: sqlite
     storage: ff-context.db
+# telemetry:
+#   backend:
+#     prometheus:
+#       enabled: true

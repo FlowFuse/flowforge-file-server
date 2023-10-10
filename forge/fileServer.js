@@ -50,6 +50,11 @@ module.exports = async (options = {}) => {
         logger: loggerConfig
     })
 
+    if (runtimeConfig.telemetry.backend?.prometheus?.enabled) {
+        const metricsPlugin = require('fastify-metrics')
+        await server.register(metricsPlugin, { endpoint: '/metrics' })
+    }
+
     server.addHook('onError', async (request, reply, error) => {
         // Useful for debugging when a route goes wrong
         // console.log(error.stack)
