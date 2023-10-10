@@ -109,12 +109,20 @@ driver:
   type: localfs
   options:
     root: var/root
+telemetry:
+  backend:
+    prometheus:
+      enabled: true
 ```
 
 - base_url - Where to reach the core FlowForge platform
 - driver
     - type - can be `s3`, `localfs` or `memory` (for testing)
     - options - will vary by driver
+- telemetry
+    - backend
+         - prometheus
+             - enabled - turns on the `/metrics` endpoint to track resource usage
 
 ### File Storage
 #### S3
