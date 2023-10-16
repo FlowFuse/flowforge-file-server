@@ -50,7 +50,7 @@ module.exports = async (options = {}) => {
         logger: loggerConfig
     })
 
-    if (runtimeConfig.telemetry.backend?.prometheus?.enabled) {
+    if (runtimeConfig.telemetry?.backend?.prometheus?.enabled) {
         const metricsPlugin = require('fastify-metrics')
         await server.register(metricsPlugin, { endpoint: '/metrics' })
     }
