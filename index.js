@@ -3,6 +3,7 @@
 
 const semver = require('semver')
 const flowForgeFileServer = require('./forge/fileServer')
+const YAML = require('yaml')
 
 const app = (async function () {
     if (!semver.satisfies(process.version, '>=16.0.0')) {
@@ -11,7 +12,20 @@ const app = (async function () {
     }
 
     try {
-        const server = await flowForgeFileServer()
+        const options = {}
+        // The tests for `nr-persistent-context` run a local copy of the file-server
+        // and pass in the full config via this env var
+        if (process.env.FF_FS_TEST_CONFIG) {
+            try {
+                options.config = YAML.parse(process.env.FF_FS_TEST_CONFIG)
+            } catch (err) {
+                console.error('Failed to parse FF_FS_TEST_CONFIG:', err)
+                process.exitCode = 1
+                return
+            }
+        }
+
+        const server = await flowForgeFileServer(options)
         let stopping = false
         async function exitWhenStopped () {
             if (!stopping) {
