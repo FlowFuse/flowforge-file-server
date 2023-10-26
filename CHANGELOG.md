@@ -1,3 +1,15 @@
+#### 1.13.0: Release
+
+ - Bump workflows to v0.1.1 version (#90) @ppawlowski
+ - Pin reusable workflows to v0.1.0 (#89) @ppawlowski
+ - Allow config to be passed via env for testing (#88) @knolleary
+ - Add /metrics endpoint (#87) @hardillb
+ - Fix run serve (#84) @hardillb
+ - Fix doule export (#83) @hardillb
+ - Allow JSON HTTP Request logging from the FileServer (#82) @hardillb
+ - Update ff references in package.json (#80) @knolleary
+ - Change repo references in workflows after github org rename (#78) @ppawlowski
+
 #### 1.12.0: Release
 
  - Publish nightly package to npmjs (#77) @ppawlowski
