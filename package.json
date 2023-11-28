@@ -15,7 +15,7 @@
         "ff-file-storage": "./index.js"
     },
     "keywords": [
-        "flowforge",
+        "flowfuse",
         "object-store"
     ],
     "repository": {
