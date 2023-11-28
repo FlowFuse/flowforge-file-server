@@ -1,5 +1,5 @@
 {
-    "name": "@flowforge/file-server",
+    "name": "@flowfuse/file-server",
     "version": "1.14.0",
     "description": "A basic Object Storage backend",
     "main": "index.js",
