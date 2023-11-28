@@ -19,7 +19,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     uses: 'flowfuse/github-actions-workflows/.github/workflows/publish_node_package.yml@v0.1.1'
     with:
-      package_name: flowforge-file-server
+      package_name: flowfuse-file-server
       publish_package: true
     secrets:
       npm_registry_token: ${{ secrets.NPM_PUBLISH_TOKEN }}
