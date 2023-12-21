@@ -1,3 +1,9 @@
+#### 1.15.0: Release
+
+ - Update npm-publish action version to v2 (#94) @ppawlowski
+ - Tidy up some more ff references (#93) @knolleary
+ - Update npm org name (#86) @knolleary
+
 #### 1.14.0: Release
 
 
