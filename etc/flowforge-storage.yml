@@ -1,4 +1,4 @@
-host: '0.0.0.0'
+host: '::'
 port: 3001
 base_url: http://localhost:3000
 driver:
