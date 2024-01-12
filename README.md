@@ -102,7 +102,7 @@ All requests should include a `Authorization` header with a Bearer token assigne
 Configuration is read from `etc/flowforge-storage.yml`
 
 ```yaml
-host: 0.0.0.0
+host: '::'
 port: 3001
 base_url: http://flowforge:3000
 driver:
@@ -139,7 +139,7 @@ The following can be any of the options for the S3Client Contructor, see [here](
         - secretAccessKey - SecretKey/Password
 
 ```yaml
-host: '0.0.0.0'
+host: '::'
 port: 3001
 base_url: http://forge.default
 driver:
