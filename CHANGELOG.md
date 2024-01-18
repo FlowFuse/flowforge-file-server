@@ -1,3 +1,6 @@
+#### 2.0.0: Release
+
+
 #### 1.15.0: Release
 
  - Update npm-publish action version to v2 (#94) @ppawlowski
