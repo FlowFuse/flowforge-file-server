@@ -26,7 +26,7 @@ module.exports = fp(async function (app, opts, done) {
     }
 
     async function checkAuth (request, reply) {
-        if (request.url === '/metrics') {
+        if (request.url === '/metrics' || request.url === '/health') {
             return
         }
         try {
