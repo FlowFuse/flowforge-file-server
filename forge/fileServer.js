@@ -89,6 +89,9 @@ module.exports = async (options = {}) => {
         // Routes
         await server.register(routes, { logLevel: server.config.logging.http })
 
+        // Health status
+        await server.register(require('fastify-healthcheck'))
+
         server.ready()
 
         return server
