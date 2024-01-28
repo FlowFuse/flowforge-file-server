@@ -37,6 +37,7 @@
         "fastify": "^4.21.0",
         "fastify-metrics": "^10.3.0",
         "fastify-plugin": "^4.5.1",
+        "fastify-healthcheck": "^4.4.0",
         "got": "^11.8.6",
         "pg": "^8.11.2",
         "pino": "^8.15.1",
