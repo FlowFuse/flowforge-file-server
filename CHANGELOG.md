@@ -1,3 +1,7 @@
+#### 2.1.0: Release
+
+ - Feat: Add health check enpoint (#97) @ppawlowski
+
 #### 2.0.0: Release
 
 
