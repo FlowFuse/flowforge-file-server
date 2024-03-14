@@ -1,3 +1,8 @@
+#### 2.2.0: Release
+
+ - Bump jsonata and @node-red/util (#100) @app/dependabot
+ - Bump ip from 2.0.0 to 2.0.1 (#99) @app/dependabot
+
 #### 2.1.0: Release
 
  - Feat: Add health check enpoint (#97) @ppawlowski
