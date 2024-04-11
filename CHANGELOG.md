@@ -1,3 +1,6 @@
+#### 2.3.0: Release
+
+
 #### 2.2.0: Release
 
  - Bump jsonata and @node-red/util (#100) @app/dependabot
