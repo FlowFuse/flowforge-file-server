@@ -1,3 +1,7 @@
+#### 2.4.0: Release
+
+ - Bump tar from 6.1.15 to 6.2.1 (#103) @app/dependabot
+
 #### 2.3.0: Release
 
 
