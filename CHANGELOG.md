@@ -1,3 +1,9 @@
+#### 2.5.0: Release
+
+ - Bump actions/checkout from 3 to 4 (#107) @app/dependabot
+ - Bump actions/setup-node from 1 to 4 (#106) @app/dependabot
+ - Enable dependabot for github actions (#105) @ppawlowski
+
 #### 2.4.0: Release
 
  - Bump tar from 6.1.15 to 6.2.1 (#103) @app/dependabot
