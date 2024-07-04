@@ -1,3 +1,7 @@
+#### 2.6.1: Release
+
+ - Repackaging of 2.6.0
+
 #### 2.6.0: Release
 
  - Bump braces from 3.0.2 to 3.0.3 (#113) @app/dependabot

@@ -1,6 +1,6 @@
 {
     "name": "@flowfuse/file-server",
-    "version": "2.6.0",
+    "version": "2.6.1",
     "description": "A basic Object Storage backend",
     "main": "index.js",
     "scripts": {
