@@ -1,3 +1,8 @@
+#### 2.6.0: Release
+
+ - Bump braces from 3.0.2 to 3.0.3 (#113) @app/dependabot
+ - ci: Bump build_node_package workflow to 0.14.0 (#112) @ppawlowski
+
 #### 2.5.0: Release
 
  - Bump actions/checkout from 3 to 4 (#107) @app/dependabot
