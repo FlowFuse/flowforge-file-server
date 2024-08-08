@@ -1,3 +1,8 @@
+#### 2.7.1: Release
+
+ - Add locking in the app to avoid deadlock (#123) @knolleary
+ - Bump fast-xml-parser and @aws-sdk/client-s3 (#121) @app/dependabot
+
 #### 2.7.0: Release
 
 
