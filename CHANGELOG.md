@@ -1,3 +1,6 @@
+#### 2.8.0: Release
+
+
 #### 2.7.1: Release
 
  - Add locking in the app to avoid deadlock (#123) @knolleary
