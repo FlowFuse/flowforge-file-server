@@ -22,7 +22,7 @@ module.exports = fp(async function (app, opts, done) {
                 authorization: `Bearer ${token}`
             }
         })
-        return project.body
+        return JSON.parse(project.body)
     }
 
     async function checkAuth (request, reply) {
