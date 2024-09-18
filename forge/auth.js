@@ -1,4 +1,3 @@
-
 const fp = require('fastify-plugin')
 const got = require('got')
 
@@ -9,7 +8,8 @@ module.exports = fp(async function (app, opts, done) {
     const client = got.extend({
         prefixUrl: `${app.config.base_url}/account/check/project`,
         headers: {
-            'user-agent': 'FlowForge Storage Server'
+            'user-agent': 'FlowForge Storage Server',
+            'ff-quota': true
         },
         timeout: {
             request: 500
@@ -22,22 +22,30 @@ module.exports = fp(async function (app, opts, done) {
                 authorization: `Bearer ${token}`
             }
         })
-        return !!project
+        return JSON.parse(project.body)
     }
 
     async function checkAuth (request, reply) {
+        if (request.url === '/metrics' || request.url === '/health') {
+            return
+        }
         try {
             const token = getAuthToken(request)
             const cacheOk = checkCache(token, request.params.projectId)
             if (!cacheOk) {
-                if (!await checkToken(request.params.projectId, token)) {
+                const tokenResponse = await checkToken(request.params.projectId, token)
+                if (!tokenResponse) {
                     throw new Error('Invalid token')
                 }
+                request.quota = tokenResponse.quota
                 // update cache
                 authCache[token] = {
                     ttl: Date.now(),
-                    projectId: request.params.projectId
+                    projectId: request.params.projectId,
+                    quota: tokenResponse.quota
                 }
+            } else {
+                request.quota = authCache[token].quota
             }
         } catch (error) {
             // always send 401 for security reasons

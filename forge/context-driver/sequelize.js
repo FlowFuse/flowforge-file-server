@@ -1,9 +1,43 @@
-const { Sequelize, DataTypes } = require('sequelize')
+const { Sequelize, DataTypes, where, fn, col, Op } = require('sequelize')
 const { getObjectProperty, getItemSize } = require('./quotaTools')
 const util = require('@node-red/util').util
 const path = require('path')
 
 let sequelize, app
+
+/**
+ */
+const activeLocks = new Map()
+/**
+ * This is a simple instanceId-level locking mechanism that ensures we single-thread
+ * requests related to a single instance.
+ *
+ * This is not scalable, but solves an immediate issue around deadlocks caused by
+ * parallel requests to update different context scopes for the same instance.
+ *
+ * See https://github.com/FlowFuse/file-server/issues/122
+ * @param {*} instanceId the id of the instance to lock
+ * @returns a promise that resolves once the lock is held. The promise resolves with a function that must be called to release the lock
+ */
+async function getInstanceLock (instanceId) {
+    let lockingPromise
+    if (!activeLocks.has(instanceId)) {
+        lockingPromise = Promise.resolve()
+        activeLocks.set(instanceId, lockingPromise)
+    } else {
+        lockingPromise = activeLocks.get(instanceId)
+    }
+    let unlockNextPromise
+    const nextPromise = new Promise(resolve => {
+        unlockNextPromise = () => {
+            resolve()
+        }
+        return unlockNextPromise
+    })
+    const unlockPromise = lockingPromise.then(() => unlockNextPromise)
+    activeLocks.set(instanceId, lockingPromise.then(() => nextPromise))
+    return unlockPromise
+}
 
 module.exports = {
     init: async function (_app) {
@@ -44,7 +78,7 @@ module.exports = {
 
         sequelize = new Sequelize(dbOptions)
 
-        app.log.info(`FlowForge File Server Sequelize Context connected to ${dbOptions.dialect} on ${dbOptions.host || dbOptions.storage}`)
+        app.log.info(`FlowFuse File Server Sequelize Context connected to ${dbOptions.dialect} on ${dbOptions.host || dbOptions.storage}`)
 
         const Context = sequelize.define('Context', {
             project: { type: DataTypes.STRING, allowNull: false, unique: 'context-project-scope-unique' },
@@ -54,83 +88,123 @@ module.exports = {
         await sequelize.sync()
         this.Context = Context
     },
-    set: async function (projectId, scope, input) {
-        const { path } = parseScope(scope)
-        await sequelize.transaction({
-            type: Sequelize.Transaction.TYPES.IMMEDIATE
-        },
-        async (t) => {
-            const quotaLimit = app.config?.context?.quota || 0
-            // if quota is set, check if we are over quota or will be after this update
-            if (quotaLimit > 0) {
-                // Difficulties implementing this correctly
-                // - The final size of data can only be determined after the data is stored.
-                //   This is due to the fact that some keys may be deleted and some may be added
-                //   and the size of the data is not the same as the size of the keys.
-                // This implementation is not ideal, but it is a good approximation and will
-                //   prevent the possibility of runaway storage usage.
-                let changeSize = 0
-                const { path } = parseScope(scope)
-                const row = await this.Context.findOne({
-                    attributes: ['values'],
+    /**
+     * Set the context data for a given scope
+     * @param {string} instanceId - The instance id
+     * @param {string} scope - The context scope to write to
+     * @param {[{key:string, value:any}]} input - The context data to write
+     * @param {boolean} [overwrite=false] - If true, any context data will be overwritten (i.e. for a cache dump). If false, the context data will be merged with the existing data.
+     * @param {number} quotaOverride - if set overrides the locally configured limit
+     */
+    set: async function (instanceId, scope, input, overwrite = false, quotaOverride = 1000) {
+        // Obtain the lock for this instance
+        const unlock = await getInstanceLock(instanceId)
+        try {
+            const { path } = parseScope(scope)
+            await sequelize.transaction({
+                type: Sequelize.Transaction.TYPES.IMMEDIATE
+            },
+            async (t) => {
+                // get the existing row of context data from the database (if any)
+                let existingRow = await this.Context.findOne({
                     where: {
-                        project: projectId,
+                        project: instanceId,
                         scope: path
-                    }
-                })
-                for (const element of input) {
-                    const currentItem = row ? getObjectProperty(row.values, element.key) : undefined
-                    if (currentItem === undefined && element.value !== undefined) {
-                        // this is an addition
-                        changeSize += getItemSize(element.value)
-                    } else if (currentItem !== undefined && element.value === undefined) {
-                        // this is an deletion
-                        changeSize -= getItemSize(currentItem)
-                    } else {
-                        // this is an update
-                        changeSize -= getItemSize(currentItem)
-                        changeSize += getItemSize(element.value)
-                    }
-                }
-                // only calculate the current size if we are going to need it
-                if (changeSize >= 0) {
-                    const currentSize = await this.quota(projectId)
-                    if (currentSize + changeSize > quotaLimit) {
-                        const err = new Error('Over Quota')
-                        err.code = 'over_quota'
-                        err.error = err.message
-                        err.limit = quotaLimit
-                        throw err
-                    }
-                }
-            }
-            let existing = await this.Context.findOne({
-                where: {
-                    project: projectId,
-                    scope: path
-                },
-                lock: t.LOCK.UPDATE,
-                transaction: t
-            })
-            if (!existing) {
-                existing = await this.Context.create({
-                    project: projectId,
-                    scope: path,
-                    values: {}
-                },
-                {
+                    },
+                    lock: t.LOCK.UPDATE,
                     transaction: t
                 })
-            }
-            for (const i in input) {
-                const path = input[i].key
-                const value = input[i].value
-                util.setMessageProperty(existing.values, path, value)
-            }
-            existing.changed('values', true)
-            await existing.save({ transaction: t })
-        })
+                const quotaLimit = quotaOverride || app.config?.context?.quota || 0
+                // if quota is set, check if we are over quota or will be after this update
+                if (quotaLimit > 0) {
+                    // Difficulties implementing this correctly
+                    // - The final size of data can only be determined after the data is stored.
+                    //   This is due to the fact that some keys may be deleted and some may be added
+                    //   and the size of the data is not the same as the size of the keys.
+                    // This implementation is not ideal, but it is a good approximation and will
+                    //   prevent the possibility of runaway storage usage.
+                    let changeSize = 0
+                    let hasValues = false
+                    // if we are overwriting, then we need to remove the existing size to get the final size
+                    if (existingRow) {
+                        if (overwrite) {
+                            changeSize -= getItemSize(existingRow.values || '')
+                        } else {
+                            hasValues = existingRow?.values && Object.keys(existingRow.values).length > 0
+                        }
+                    }
+                    // calculate the change in size
+                    for (const element of input) {
+                        const currentItem = hasValues ? getObjectProperty(existingRow.values, element.key) : undefined
+                        if (currentItem === undefined && element.value !== undefined) {
+                            // this is an addition
+                            changeSize += getItemSize(element.value)
+                        } else if (currentItem !== undefined && element.value === undefined) {
+                            // this is an deletion
+                            changeSize -= getItemSize(currentItem)
+                        } else {
+                            // this is an update
+                            changeSize -= getItemSize(currentItem)
+                            changeSize += getItemSize(element.value)
+                        }
+                    }
+                    // only calculate the current size if we are going to need it
+                    if (changeSize >= 0) {
+                        const currentSize = await this.quota(instanceId)
+                        if (currentSize + changeSize > quotaLimit) {
+                            const err = new Error('Over Quota')
+                            err.code = 'over_quota'
+                            err.error = err.message
+                            err.limit = quotaLimit
+                            throw err
+                        }
+                    }
+                }
+
+                // if we are overwriting, then we need to reset the values in the existing row (if any)
+                if (existingRow && overwrite) {
+                    existingRow.values = {} // reset the values since this is a mem cache -> DB dump
+                }
+
+                // if there is no input, then we are probably deleting the row
+                if (input?.length > 0) {
+                    if (!existingRow) {
+                        existingRow = await this.Context.create({
+                            project: instanceId,
+                            scope: path,
+                            values: {}
+                        },
+                        {
+                            transaction: t
+                        })
+                    }
+                    for (const i in input) {
+                        const path = input[i].key
+                        const value = input[i].value
+                        util.setMessageProperty(existingRow.values, path, value)
+                    }
+                }
+                if (existingRow) {
+                    if (existingRow.values && Object.keys(existingRow.values).length === 0) {
+                        await existingRow.destroy({ transaction: t })
+                    } else {
+                        existingRow.changed('values', true)
+                        await existingRow.save({ transaction: t })
+                    }
+                }
+            })
+        } finally {
+            // Regardless of the result, release the lock
+            await unlock()
+        }
     },
+    /**
+     * Get the context data for a given scope
+     * @param {string} projectId - The project id
+     * @param {string} scope - The context scope to read from
+     * @param {[string]} keys - The context keys to read
+     * @returns {[{key:string, value?:any}]} - The context data
+    */
     get: async function (projectId, scope, keys) {
         const { path } = parseScope(scope)
         const row = await this.Context.findOne({
@@ -161,6 +235,38 @@ module.exports = {
             })
         }
         return values
+    },
+    /**
+     * Get all context values for a project
+     * @param {string} projectId The project id
+     * @param {object} pagination The pagination settings
+     * @param {number} pagination.limit The maximum number of rows to return
+     * @param {string} pagination.cursor The cursor to start from
+     * @returns {[{scope: string, values: object}]}
+     */
+    getAll: async function (projectId, pagination = {}) {
+        const where = { project: projectId }
+        const limit = parseInt(pagination.limit) || 1000
+        const rows = await this.Context.findAll({
+            attributes: ['id', 'scope', 'values'],
+            where: buildPaginationSearchClause(pagination, where),
+            order: [['id', 'ASC']],
+            limit
+        })
+        const count = await this.Context.count({ where })
+        const data = rows?.map(row => {
+            const dataRow = { scope: row.dataValues.scope, values: row.dataValues.values }
+            const { scope } = parseScope(dataRow.scope)
+            dataRow.scope = scope
+            return dataRow
+        })
+        return {
+            meta: {
+                next_cursor: rows.length === limit ? rows[rows.length - 1].id : undefined
+            },
+            count,
+            data
+        }
     },
     keys: async function (projectId, scope) {
         const { path } = parseScope(scope)
@@ -225,46 +331,112 @@ module.exports = {
                         scope
                     }
                 })
-                await r.destroy()
+                r && await r.destroy()
             }
         }
     },
     quota: async function (projectId) {
-        const scopesResults = await this.Context.findAll({
+        // Sum the lengths in the query
+        // - note for postgres, we have to cast the values column from JSON to text
+        const sizeResult = await this.Context.findOne({
             where: {
                 project: projectId
-            }
+            },
+            attributes: [
+                [sequelize.fn('SUM', sequelize.fn('LENGTH', sequelize.cast(sequelize.col('values'), 'text'))), 'length']
+            ]
         })
-        let size = 0
-        scopesResults.forEach(scope => {
-            const strValues = JSON.stringify(scope.values)
-            size += strValues.length
-        })
-        return size
+        return sizeResult.getDataValue('length') || 0
     }
 }
 
 /**
  * Parse a scope string into its parts
- * @param {String} scope the scope to parse, passed in from node-red
+ * @param {String} scope the scope to parse, passed in from node-red or the database
  */
 function parseScope (scope) {
     let type, path
     let flow = null
+    let node = null
     if (scope === 'global') {
         type = 'global'
         path = 'global'
+    } else if (scope.indexOf('.nodes.') > -1) {
+        // node context (db scope format  <flowId>.nodes.<nodeId>)
+        const parts = scope.split('.nodes.')
+        type = 'node'
+        flow = '' + parts[0]
+        node = '' + parts[1]
+        scope = `${node}:${flow}`
+        path = scope
+    } else if (scope.endsWith('.flow')) {
+        // flow context (db scope format  <flowId>.flow)
+        path = scope
+        flow = scope.replace('.flow', '')
+        scope = flow
+        type = 'flow'
     } else if (scope.indexOf(':') > -1) {
-        // node context
+        // node context (node-red scope format  <nodeId>:<flowId>)
         const parts = scope.split(':')
         type = 'node'
-        scope = '' + parts[0]
         flow = '' + parts[1]
-        path = `${flow}.nodes.${scope}`
+        node = '' + parts[0]
+        path = `${flow}.nodes.${node}`
     } else {
         // flow context
         type = 'flow'
         path = `${scope}.flow`
     }
-    return { type, scope, path, flow }
+    return { type, scope, path, flow, node }
+}
+
+/**
+ * Generate a properly formed where-object for sequelize findAll, that applies
+ * the required pagination, search and filter logic
+ *
+ * @param {Object} params the pagination options - cursor, query, limit
+ * @param {Object} whereClause any pre-existing where-query clauses to include
+ * @param {Array<String>} columns an array of column names to search.
+ * @returns a `where` object that can be passed to sequelize query
+ */
+function buildPaginationSearchClause (params, whereClause = {}, columns = [], filterMap = {}) {
+    whereClause = { ...whereClause }
+    if (params.cursor) {
+        whereClause.id = { [Op.gt]: params.cursor }
+    }
+    whereClause = {
+        [Op.and]: [
+            whereClause
+        ]
+    }
+
+    for (const [key, value] of Object.entries(filterMap)) {
+        if (Object.hasOwn(params, key)) {
+            // A filter has been provided for key
+            let clauseContainer = whereClause[Op.and]
+            let param = params[key]
+            if (Array.isArray(param)) {
+                if (param.length > 1) {
+                    clauseContainer = []
+                    whereClause[Op.and].push({ [Op.or]: clauseContainer })
+                }
+            } else {
+                param = [param]
+            }
+            param.forEach(p => {
+                clauseContainer.push(where(fn('lower', col(value)), p.toLowerCase()))
+            })
+        }
+    }
+    if (params.query && columns.length) {
+        const searchTerm = `%${params.query.toLowerCase()}%`
+        const searchClauses = columns.map(colName => {
+            return where(fn('lower', col(colName)), { [Op.like]: searchTerm })
+        })
+        const query = {
+            [Op.or]: searchClauses
+        }
+        whereClause[Op.and].push(query)
+    }
+    return whereClause
 }

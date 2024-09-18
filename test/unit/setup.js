@@ -22,7 +22,7 @@ function authServer (config = {}) {
                 authToken = authConfig.find(auth => auth.projectId === projectId)
                 if (req.headers.authorization === ('Bearer ' + authToken.token)) {
                     res.writeHead(200)
-                    res.end('{}')
+                    res.end('{ "quota": { "file": 1000, "context": 1000 } }')
                     return
                 }
                 throw new Error('Unknown request')
@@ -64,9 +64,9 @@ async function setupApp (config = {}) {
             }
         },
         context: {
-            type: config.contextDriver || 'memory',
+            type: config.contextDriver || 'sequelize',
             quota: config.contextQuota || 2000, // default context quota is 2KB
-            options: config.contextDriverOptions
+            options: config.contextDriverOptions || { type: 'sqlite', storage: 'ff-context.db' }
         }
     }
     if (options.config.context.type === 'sequelize' && options.config.context.options.type === 'postgres') {

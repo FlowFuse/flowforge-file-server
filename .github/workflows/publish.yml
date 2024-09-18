@@ -1,0 +1,46 @@
+name: Build and push packages
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    uses: 'flowfuse/github-actions-workflows/.github/workflows/build_node_package.yml@v0.29.0'
+    with:
+      node: '[
+              {"version": "18", "tests": false, "lint": true},
+            ]'
+  
+  publish:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    uses: 'flowfuse/github-actions-workflows/.github/workflows/publish_node_package.yml@v0.29.0'
+    with:
+      package_name: file-server
+      publish_package: true
+    secrets:
+      npm_registry_token: ${{ secrets.NPM_PUBLISH_TOKEN }}
+
+  dispatch_container_build:
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate a token
+        id: generate_token
+        uses: tibdex/github-app-token@v2
+        with:
+          app_id: ${{ secrets.GH_BOT_APP_ID }}
+          private_key: ${{ secrets.GH_BOT_APP_KEY }}
+      - name: Trigger flie-server container image build
+        uses: benc-uk/workflow-dispatch@v1
+        with:
+          workflow: fileserver-container.yml
+          repo: flowfuse/helm
+          ref: main
+          token: ${{ steps.generate_token.outputs.token }}
+          inputs: '{"fileserver_ref": "${{ github.ref }}", "fileserver_release_name": "${{ needs.publish.outputs.release_name }}"}'

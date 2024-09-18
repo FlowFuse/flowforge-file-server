@@ -1,8 +1,8 @@
-# A Basic Object Store for use with FlowForge
+# A Basic Object Store for use with FlowFuse
 
 ## Authorisation
 
-All requests should include a `Authorization` header with a Bearer token assigned by the FlowForge platform to identify
+All requests should include a `Authorization` header with a Bearer token assigned by the FlowFuse platform to identify
 ## End Points
 
 ### File Storage
@@ -109,12 +109,20 @@ driver:
   type: localfs
   options:
     root: var/root
+telemetry:
+  backend:
+    prometheus:
+      enabled: true
 ```
 
 - base_url - Where to reach the core FlowForge platform
 - driver
     - type - can be `s3`, `localfs` or `memory` (for testing)
     - options - will vary by driver
+- telemetry
+    - backend
+         - prometheus
+             - enabled - turns on the `/metrics` endpoint to track resource usage
 
 ### File Storage
 #### S3
@@ -157,17 +165,6 @@ options.
 
 ### Context Storage
 
-#### Redis
-
-This driver requires an instance of Redis with the RedisJSON enabled e.g. the `redislabs/rejson` docker container
-
-```yaml
-context:
-  type: redis
-  options:
-    urls: redis://localhost:6379
-```
-
 #### Sequelize
 
 This driver can use either PostgreSQL or SQLite to hold context values.
@@ -198,10 +195,6 @@ context:
 
 Where `context.options.storage` is the filename of the SQLite database, by default it will be written to 
 the `var` directory if a fully qualified path is not provided.
-
-#### Memory
-
-This driver is purely to make testing easier, it has no configuration options.
 
 ### Environment variables
 

@@ -37,8 +37,42 @@ module.exports = async function (app, opts, done) {
     }, async (request, reply) => {
         const body = request.body
         const projectId = request.params.projectId
+        const scope = request.params.scope
         try {
-            await driver.set(projectId, request.params.scope, body)
+            await driver.set(projectId, scope, body, false, request.quota?.context)
+            reply.code(200).send({})
+        } catch (error) {
+            let statusCode = error.statusCode || 400
+            if (error.code === 'over_quota') {
+                statusCode = 413
+            }
+            reply.code(statusCode).send({ error: error.message, code: error.code, limit: error.limit })
+        }
+    })
+
+    /**
+     * Write full scope value from cache
+     *
+     * @name /v1/context/:projectId/cache/:scope
+     * @static
+     * @memberof forge.fileserver.context
+     */
+    app.post('/:projectId/cache/:scope', {
+        schema: {
+            body: {
+                type: 'object'
+            }
+        }
+    }, async (request, reply) => {
+        const body = request.body || {}
+        const data = []
+        for (const key in body) {
+            data.push({ key, value: body[key] })
+        }
+        const projectId = request.params.projectId
+        const scope = request.params.scope
+        try {
+            await driver.set(projectId, scope, data, true, request.quota?.context)
             reply.code(200).send({})
         } catch (error) {
             let statusCode = error.statusCode || 400
@@ -74,6 +108,27 @@ module.exports = async function (app, opts, done) {
         const projectId = request.params.projectId
         try {
             reply.send(await driver.get(projectId, request.params.scope, keys))
+        } catch (error) {
+            reply.code(400).send(error)
+        }
+    })
+
+    /**
+     * Get all context
+     * An endpoint to handle the request to get context
+     * for loading the cache
+     *
+     * @name /v1/context/:projectId/cache
+     * @static
+     * @memberof forge.fileserver.context
+     */
+    app.get('/:projectId/cache', {
+
+    }, async (request, reply) => {
+        const projectId = request.params.projectId
+        const paginationOptions = app.getPaginationOptions(request, { limit: 30 })
+        try {
+            reply.send(await driver.getAll(projectId, paginationOptions))
         } catch (error) {
             reply.code(400).send(error)
         }
