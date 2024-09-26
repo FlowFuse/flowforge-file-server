@@ -1,3 +1,13 @@
+#### 2.9.0: Release
+
+ - Bump flowfuse/github-actions-workflows from 0.29.0 to 0.30.0 (#130)
+ - Bump flowfuse/github-actions-workflows from 0.28.0 to 0.29.0 (#128)
+ - Bump find-my-way and fastify (#129) @app/dependabot
+ - Bump flowfuse/github-actions-workflows from 0.1.1 to 0.28.0 (#127) @app/dependabot
+ - Bump tibdex/github-app-token from 1 to 2 (#109) @app/dependabot
+ - Bump JS-DevTools/npm-publish from 2 to 3 (#108) @app/dependabot
+ - Fix quota parsing (#126) @hardillb
+
 #### 2.8.0: Release
 
 
