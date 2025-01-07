@@ -2,12 +2,12 @@
 'use strict'
 
 const semver = require('semver')
-const flowForgeFileServer = require('./forge/fileServer')
+const fileServer = require('./forge/fileServer')
 const YAML = require('yaml')
 
 const app = (async function () {
     if (!semver.satisfies(process.version, '>=16.0.0')) {
-        console.error(`FlowForge File Server requires at least NodeJS v16, ${process.version} found`)
+        console.error(`FlowFuse File Server requires at least NodeJS v16, ${process.version} found`)
         process.exit(1)
     }
 
@@ -25,14 +25,14 @@ const app = (async function () {
             }
         }
 
-        const server = await flowForgeFileServer(options)
+        const server = await fileServer(options)
         let stopping = false
         async function exitWhenStopped () {
             if (!stopping) {
                 stopping = true
-                server.log.info('Stopping FlowForge File Server')
+                server.log.info('Stopping FlowFuse File Server')
                 await server.close()
-                server.log.info('FlowForge File Server stopped')
+                server.log.info('FlowFuse File Server stopped')
                 process.exit(0)
             }
         }

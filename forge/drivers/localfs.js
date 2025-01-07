@@ -47,7 +47,7 @@ module.exports = function (app) {
         fs.mkdirSync(rootPath, { recursive: true })
     }
 
-    app.log.info(`FlowForge File Storage localfs root Directory: ${rootPath}`)
+    app.log.info(`FlowFuse File Storage localfs root Directory: ${rootPath}`)
 
     function resolvePath (teamId, projectId, path) {
         let resolvedPath

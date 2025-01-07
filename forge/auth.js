@@ -8,7 +8,7 @@ module.exports = fp(async function (app, opts, done) {
     const client = got.extend({
         prefixUrl: `${app.config.base_url}/account/check/project`,
         headers: {
-            'user-agent': 'FlowForge Storage Server',
+            'user-agent': 'FlowFuse Storage Server',
             'ff-quota': true
         },
         timeout: {
