@@ -152,12 +152,16 @@ module.exports = {
                     if (changeSize >= 0) {
                         const currentSize = await this.quota(instanceId)
                         if (currentSize + changeSize > quotaLimit) {
+                            app.log.warn(`context quota check fail: ${instanceId}/${scope} current=${currentSize} delta=${changeSize} limit=${quotaLimit} requested=${currentSize + changeSize}`)
                             const err = new Error('Over Quota')
                             err.code = 'over_quota'
                             err.error = err.message
                             err.limit = quotaLimit
                             throw err
                         }
+                        app.log.warn(`context quota check pass: ${instanceId}/${scope} current=${currentSize} delta=${changeSize} limit=${quotaLimit} requested=${currentSize + changeSize}`)
+                    } else {
+                        app.log.info(`context quota check pass: ${instanceId}/${scope} delta=${changeSize}`)
                     }
                 }
 
